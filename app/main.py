@@ -1,13 +1,12 @@
 from fastapi import FastAPI
 
-app = FastAPI()
+from app.db.database import Base, engine
+from app.models.weather import Weather
 
 
-@app.get("/")
-def root():
-    return {"message": "API is running"}
+Base.metadata.create_all(bind=engine)
 
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+app = FastAPI(
+    title="Rivne Weather Service",
+)
