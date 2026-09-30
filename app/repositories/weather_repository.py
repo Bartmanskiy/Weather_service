@@ -18,6 +18,13 @@ class WeatherRepository:
 
         return weather
 
+    def create_many(self, weather_records: list[Weather]) -> int:
+        self.db.add_all(weather_records)
+        self.db.commit()
+
+        return len(weather_records)
+    
+
     def get_by_date(self, weather_date: date) -> Weather | None:
         statement = select(Weather).where(
             Weather.date == weather_date
