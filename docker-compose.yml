@@ -8,7 +8,11 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_HOST: cache
-      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PORT: 6379
+      WEATHER_CITY: ${WEATHER_CITY}
+      WEATHER_COUNTRY_CODE: ${WEATHER_COUNTRY_CODE}
+      WEATHER_LATITUDE: ${WEATHER_LATITUDE}
+      WEATHER_LONGITUDE: ${WEATHER_LONGITUDE}
     depends_on:
       db:
         condition: service_healthy
@@ -18,12 +22,12 @@ services:
 
   db:
     image: postgres:15
-    ports:
-      - "5433:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -36,8 +40,6 @@ services:
   cache:
     image: redis:7-alpine
     command: redis-server --appendonly yes
-    environment:
-      REDIS_PORT: ${REDIS_PORT}
     ports:
       - "${REDIS_PORT}:6379"
     volumes:
@@ -52,3 +54,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+

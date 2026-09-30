@@ -36,4 +36,19 @@ class OpenMeteoClient:
 
         response.raise_for_status()
 
+        if not response.content:
+            raise RuntimeError(
+                "Open-Meteo returned an empty response"
+            )
+
+        if "application/json" not in response.headers.get(
+            "content-type",
+            "",
+        ):
+            raise RuntimeError(
+                "Open-Meteo returned non-JSON response: "
+                f"{response.text[:500]}"
+            )
+
         return response.json()
+    
