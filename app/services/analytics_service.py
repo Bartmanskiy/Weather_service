@@ -1,7 +1,6 @@
 import json
 from datetime import date
 
-from app.cache.redis import redis_client
 from app.repositories.weather_analytics_repository import (
     WeatherAnalyticsRepository,
 )
@@ -12,8 +11,10 @@ class AnalyticsService:
     def __init__(
         self,
         repository: WeatherAnalyticsRepository,
+        redis_client,
     ):
         self.repository = repository
+        self.redis_client = redis_client
 
     def get_average_for_period(
         self,
@@ -22,7 +23,7 @@ class AnalyticsService:
     ):
         cache_key = f"weather:average:{start_date}:{end_date}"
 
-        cached_result = redis_client.get(cache_key)
+        cached_result = self.redis_client.get(cache_key)
 
         if cached_result:
             return json.loads(cached_result)
@@ -39,7 +40,7 @@ class AnalyticsService:
             "total_precipitation": total_precipitation,
         }
 
-        redis_client.set(
+        self.redis_client.set(
             cache_key,
             json.dumps(result),
             ex=3600,
@@ -50,7 +51,7 @@ class AnalyticsService:
     def get_extremes(self):
         cache_key = "weather:extremes"
 
-        cached_result = redis_client.get(cache_key)
+        cached_result = self.redis_client.get(cache_key)
 
         if cached_result:
             return json.loads(cached_result)
@@ -62,7 +63,7 @@ class AnalyticsService:
             "maximum_temperature": maximum_temperature,
         }
 
-        redis_client.set(
+        self.redis_client.set(
             cache_key,
             json.dumps(result),
             ex=3600,
@@ -77,7 +78,7 @@ class AnalyticsService:
     ):
         cache_key = f"weather:monthly:{year}:{month}"
 
-        cached_result = redis_client.get(cache_key)
+        cached_result = self.redis_client.get(cache_key)
 
         if cached_result:
             return json.loads(cached_result)
@@ -94,7 +95,7 @@ class AnalyticsService:
             "precipitation_days": precipitation_days,
         }
 
-        redis_client.set(
+        self.redis_client.set(
             cache_key,
             json.dumps(result),
             ex=3600,

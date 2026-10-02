@@ -11,9 +11,17 @@ class WeatherService:
         self,
         repository: WeatherRepository,
         client: OpenMeteoClient,
+        redis_client,
     ):
         self.repository = repository
         self.client = client
+        self.redis_client = redis_client
+
+    def _invalidate_cache(self):
+        keys = self.redis_client.keys("weather:*")
+
+        if keys:
+            self.redis_client.delete(*keys)
 
     def import_weather(
         self,
@@ -52,4 +60,8 @@ class WeatherService:
         if not weather_records:
             return 0
 
-        return self.repository.create_many(weather_records)
+        imported_count = self.repository.create_many(weather_records)
+
+        self._invalidate_cache()
+
+        return imported_count

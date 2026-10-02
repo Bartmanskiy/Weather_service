@@ -34,10 +34,11 @@ class FakeWeatherClient:
         }
 
 
-def test_import_weather(db_session):
+def test_import_weather(db_session, fake_redis):
     service = WeatherService(
         repository=WeatherRepository(db_session),
         client=FakeWeatherClient(),
+        redis_client=fake_redis,
     )
 
     imported_count = service.import_weather(
@@ -54,10 +55,11 @@ def test_import_weather(db_session):
     assert weather[0].temperature_avg == 15.0
 
 
-def test_import_weather_skips_duplicates(db_session):
+def test_import_weather_skips_duplicates(db_session, fake_redis):
     service = WeatherService(
         repository=WeatherRepository(db_session),
         client=FakeWeatherClient(),
+        redis_client=fake_redis,
     )
 
     first_import = service.import_weather(
@@ -76,3 +78,43 @@ def test_import_weather_skips_duplicates(db_session):
     weather = db_session.query(Weather).all()
 
     assert len(weather) == 2
+
+
+def test_import_weather_invalidates_cache(db_session, fake_redis):
+    fake_redis.set(
+        "weather:average:2025-06-01:2025-06-02",
+        '{"average_temperature": 20}',
+    )
+
+    fake_redis.set(
+        "weather:extremes",
+        '{"minimum_temperature": 10}',
+    )
+
+    fake_redis.set(
+        "other:key",
+        "keep me",
+    )
+
+    service = WeatherService(
+        repository=WeatherRepository(db_session),
+        client=FakeWeatherClient(),
+        redis_client=fake_redis,
+    )
+
+    imported_count = service.import_weather(
+        date(2025, 6, 1),
+        date(2025, 6, 2),
+    )
+
+    assert imported_count == 2
+
+    assert fake_redis.get(
+        "weather:average:2025-06-01:2025-06-02"
+    ) is None
+
+    assert fake_redis.get(
+        "weather:extremes"
+    ) is None
+
+    assert fake_redis.get("other:key") == "keep me"

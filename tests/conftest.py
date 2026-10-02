@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.db.database import Base, get_db
 from app.main import app
-from app.services import analytics_service
+from app.cache.redis import get_redis
 
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -44,6 +44,20 @@ class FakeRedis:
     def flushall(self):
         self.data.clear()
 
+    def keys(self, pattern):
+        if pattern == "weather:*":
+            return [
+                key
+                for key in self.data
+                if key.startswith("weather:")
+            ]
+
+        return []
+
+    def delete(self, *keys):
+        for key in keys:
+            self.data.pop(key, None)
+
 
 @pytest.fixture
 def db_session():
@@ -59,16 +73,8 @@ def db_session():
 
 
 @pytest.fixture
-def fake_redis(monkeypatch):
-    fake_redis = FakeRedis()
-
-    monkeypatch.setattr(
-        analytics_service,
-        "redis_client",
-        fake_redis,
-    )
-
-    return fake_redis
+def fake_redis():
+    return FakeRedis()
 
 
 @pytest.fixture
@@ -76,7 +82,11 @@ def client(db_session, fake_redis):
     def override_get_db():
         yield db_session
 
+    def override_get_redis():
+        return fake_redis
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_redis] = override_get_redis
 
     yield TestClient(app)
 

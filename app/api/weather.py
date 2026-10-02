@@ -9,6 +9,8 @@ from app.repositories.weather_analytics_repository import WeatherAnalyticsReposi
 from app.schemas.weather import AverageWeatherResponse, ExtremeWeatherResponse, MonthlyWeatherResponse
 from app.services.analytics_service import AnalyticsService
 
+from app.cache.redis import get_redis
+
 
 router = APIRouter(
     prefix="/api/weather",
@@ -24,6 +26,7 @@ def get_average_weather(
     start_date: date,
     end_date: date,
     db: Session = Depends(get_db),
+    redis_client = Depends(get_redis),
 ):
     if start_date > end_date:
         raise HTTPException(
@@ -32,7 +35,8 @@ def get_average_weather(
         )
 
     service = AnalyticsService(
-        WeatherAnalyticsRepository(db)
+        WeatherAnalyticsRepository(db),
+        redis_client,
     )
 
     return service.get_average_for_period(
@@ -47,9 +51,11 @@ def get_average_weather(
 )
 def get_extreme_weather(
     db: Session = Depends(get_db),
+    redis_client = Depends(get_redis),
 ):
     service = AnalyticsService(
-        WeatherAnalyticsRepository(db)
+        WeatherAnalyticsRepository(db),
+        redis_client,
     )
 
     return service.get_extremes()
@@ -63,6 +69,7 @@ def get_monthly_weather(
     year: int,
     month: int,
     db: Session = Depends(get_db),
+    redis_client = Depends(get_redis),
 ):
     if month < 1 or month > 12:
         raise HTTPException(
@@ -71,7 +78,8 @@ def get_monthly_weather(
         )
 
     service = AnalyticsService(
-        WeatherAnalyticsRepository(db)
+        WeatherAnalyticsRepository(db),
+        redis_client,
     )
 
     return service.get_monthly_statistics(
